@@ -4,7 +4,7 @@ import struct
 import os
 import time
 
-from layers_1 import FullyConnectedLayer, ReLULayer, SoftmaxLossLayer
+from stu_upload.layers_1 import FullyConnectedLayer, ReLULayer, SoftmaxLossLayer
 
 MNIST_DIR = "../mnist_data"
 TRAIN_DATA = "train-images-idx3-ubyte"
@@ -12,12 +12,15 @@ TRAIN_LABEL = "train-labels-idx1-ubyte"
 TEST_DATA = "t10k-images-idx3-ubyte"
 TEST_LABEL = "t10k-labels-idx1-ubyte"
 
+
 def show_matrix(mat, name):
-    #print(name + str(mat.shape) + ' mean %f, std %f' % (mat.mean(), mat.std()))
+    # print(name + str(mat.shape) + ' mean %f, std %f' % (mat.mean(), mat.std()))
     pass
 
+
 class MNIST_MLP(object):
-    def __init__(self, batch_size=100, input_size=784, hidden1=32, hidden2=16, out_classes=10, lr=0.01, max_epoch=1, print_iter=100):
+    def __init__(self, batch_size=100, input_size=784, hidden1=32, hidden2=16, out_classes=10, lr=0.01, max_epoch=1,
+                 print_iter=100):
         self.batch_size = batch_size
         self.input_size = input_size
         self.hidden1 = hidden1
@@ -27,7 +30,7 @@ class MNIST_MLP(object):
         self.max_epoch = max_epoch
         self.print_iter = print_iter
 
-    def load_mnist(self, file_dir, is_images = 'True'):
+    def load_mnist(self, file_dir, is_images='True'):
         # Read binary data
         bin_file = open(file_dir, 'rb')
         bin_data = bin_file.read()
@@ -52,9 +55,9 @@ class MNIST_MLP(object):
         # TODO: 调用函数 load_mnist 读取和预处理 MNIST 中训练数据和测试数据的图像和标记
         print('Loading MNIST data from files...')
         train_images = self.load_mnist(os.path.join(MNIST_DIR, TRAIN_DATA), True)
-        train_labels = ________________
-        test_images = ________________
-        test_labels = ________________
+        train_labels = self.load_mnist(os.path.join(MNIST_DIR, TRAIN_LABEL), False)
+        test_images = self.load_mnist(os.path.join(MNIST_DIR, TEST_DATA), True)
+        test_labels = self.load_mnist(os.path.join(MNIST_DIR, TEST_LABEL), False)
         self.train_data = np.append(train_images, train_labels, axis=1)
         self.test_data = np.append(test_images, test_labels, axis=1)
         # self.test_data = np.concatenate((self.train_data, self.test_data), axis=0)
@@ -68,8 +71,8 @@ class MNIST_MLP(object):
         print('Building multi-layer perception model...')
         self.fc1 = FullyConnectedLayer(self.input_size, self.hidden1)
         self.relu1 = ReLULayer()
-        ________________
-        ________________
+        self.fc2 = FullyConnectedLayer(self.hidden1, self.hidden2)
+        self.relu2 = ReLULayer()
         self.fc3 = FullyConnectedLayer(self.hidden2, self.out_classes)
         self.softmax = SoftmaxLossLayer()
         self.update_layer_list = [self.fc1, self.fc2, self.fc3]
@@ -98,14 +101,18 @@ class MNIST_MLP(object):
         # TODO：神经网络的前向传播
         h1 = self.fc1.forward(input)
         h1 = self.relu1.forward(h1)
-        ________________
+        h2 = self.fc2.forward(h1)
+        h2 = self.relu2.forward(h2)
+        h3 = self.fc3.forward(h2)
         prob = self.softmax.forward(h3)
         return prob
 
     def backward(self):  # 神经网络的反向传播
         # TODO：神经网络的反向传播
         dloss = self.softmax.backward()
-        ________________
+        dh3 = self.fc3.backward(dloss)
+        dh2 = self.relu2.backward(dh3)
+        dh2 = self.fc2.backward(dh2)
         dh1 = self.relu1.backward(dh2)
         dh1 = self.fc1.backward(dh1)
 
@@ -119,8 +126,8 @@ class MNIST_MLP(object):
         for idx_epoch in range(self.max_epoch):
             self.shuffle_data()
             for idx_batch in range(max_batch):
-                batch_images = self.train_data[idx_batch*self.batch_size:(idx_batch+1)*self.batch_size, :-1]
-                batch_labels = self.train_data[idx_batch*self.batch_size:(idx_batch+1)*self.batch_size, -1]
+                batch_images = self.train_data[idx_batch * self.batch_size:(idx_batch + 1) * self.batch_size, :-1]
+                batch_labels = self.train_data[idx_batch * self.batch_size:(idx_batch + 1) * self.batch_size, -1]
                 prob = self.forward(batch_images)
                 loss = self.softmax.get_loss(batch_labels)
                 self.backward()
@@ -130,16 +137,17 @@ class MNIST_MLP(object):
 
     def evaluate(self):
         pred_results = np.zeros([self.test_data.shape[0]])
-        for idx in range(self.test_data.shape[0]/self.batch_size):
-            batch_images = self.test_data[idx*self.batch_size:(idx+1)*self.batch_size, :-1]
+        for idx in range(self.test_data.shape[0] / self.batch_size):
+            batch_images = self.test_data[idx * self.batch_size:(idx + 1) * self.batch_size, :-1]
             start = time.time()
             prob = self.forward(batch_images)
             end = time.time()
-            print("inferencing time: %f"%(end-start))
+            print("inferencing time: %f" % (end - start))
             pred_labels = np.argmax(prob, axis=1)
-            pred_results[idx*self.batch_size:(idx+1)*self.batch_size] = pred_labels
-        accuracy = np.mean(pred_results == self.test_data[:,-1])
+            pred_results[idx * self.batch_size:(idx + 1) * self.batch_size] = pred_labels
+        accuracy = np.mean(pred_results == self.test_data[:, -1])
         print('Accuracy in test set: %f' % accuracy)
+
 
 def build_mnist_mlp(param_dir='weight.npy'):
     h1, h2, e = 32, 16, 10
@@ -151,6 +159,7 @@ def build_mnist_mlp(param_dir='weight.npy'):
     # mlp.save_model('mlp-%d-%d-%depoch.npy' % (h1, h2, e))
     mlp.load_model(param_dir)
     return mlp
+
 
 if __name__ == '__main__':
     mlp = build_mnist_mlp()
