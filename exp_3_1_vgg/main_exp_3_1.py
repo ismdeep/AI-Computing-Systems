@@ -6,16 +6,18 @@ import os
 import scipy.io
 import time
 
-def computeMse(data1,data2):
+
+def computeMse(data1, data2):
     errors = []
     for i in range(len(data1)):
-        errors.append(data1[i]-data2[i])
+        errors.append(data1[i] - data2[i])
 
     squared_error = []
     for val in errors:
         squared_error.append(pow(val, 2))
-    
+
     return sum(squared_error) / len(squared_error)
+
 
 def forward(vgg):
     print('Inferencing...')
@@ -27,13 +29,14 @@ def forward(vgg):
         current = vgg.layers[vgg.param_layer_name[idx]].forward(current)
         if 'pool5' in vgg.param_layer_name[idx]:
             pool5 = current
-    print('Inference time: %f' % (time.time()-start_time))
+    print('Inference time: %f' % (time.time() - start_time))
     return current, pool5
+
 
 def check_pool5(stu_pool5):
     data = np.load('pool5_dump.npy')
     pool5_mse = computeMse(stu_pool5.flatten(), data.flatten())
-    print('test pool5 mse: %f'%pool5_mse)
+    print('test pool5 mse: %f' % pool5_mse)
 
     if pool5_mse < 0.003:
         print('CHECK POOL5 PASS.')
@@ -41,11 +44,13 @@ def check_pool5(stu_pool5):
         print('CHECK POOL5 FAILED.')
         exit()
 
+
 def evaluate(vgg):
     prob, pool5 = forward(vgg)
     top1 = np.argmax(prob[0])
     print('Classification result: id = %d, prob = %f' % (top1, prob[0, top1]))
     return pool5
+
 
 if __name__ == '__main__':
     vgg = VGG19(param_path='../imagenet-vgg-verydeep-19.mat')
