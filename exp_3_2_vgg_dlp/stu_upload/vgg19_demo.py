@@ -5,6 +5,7 @@ import numpy as np
 import os
 import scipy.io
 
+
 class VGG19(object):
     def __init__(self):
         # set up net
@@ -12,8 +13,8 @@ class VGG19(object):
         self.input_quant_params = []
         self.filter_quant_params = []
 
-    def build_model(self, 
-                    param_path='../../imagenet-vgg-verydeep-19.mat', 
+    def build_model(self,
+                    param_path='../../imagenet-vgg-verydeep-19.mat',
                     quant_param_path='../../vgg19_quant_param_new.npz'):
         self.param_path = param_path
 
@@ -25,10 +26,10 @@ class VGG19(object):
         input_params = params['input']
         filter_params = params['filter']
         for i in range(0, len(input_params), 2):
-            self.input_quant_params.append(pycnml.QuantParam(int(input_params[i]), float(input_params[i+1])))
+            self.input_quant_params.append(pycnml.QuantParam(int(input_params[i]), float(input_params[i + 1])))
         for i in range(0, len(filter_params), 2):
-            self.filter_quant_params.append(pycnml.QuantParam(int(filter_params[i]), float(filter_params[i+1])))
-        
+            self.filter_quant_params.append(pycnml.QuantParam(int(filter_params[i]), float(filter_params[i + 1])))
+
         # TODO: 使用net的createXXXLayer接口搭建VGG19网络
         # creating layers
         self.net.setInputShape(1, 3, 224, 224)
@@ -106,7 +107,7 @@ class VGG19(object):
         _______________________
         # pool5
         _______________________
-        
+
         # flatten
         self.net.createFlattenLayer('flatten', [1, 512 * 7 * 7, 1, 1])
         # fc6
@@ -121,28 +122,28 @@ class VGG19(object):
         self.net.createMlpLayer('fc8', 1000, self.input_quant_params[18])
         # softmax
         self.net.createSoftmaxLayer('softmax', 1)
-    
+
     def load_model(self):
         # loading params ... 
         print('Loading parameters from file ' + self.param_path)
         params = scipy.io.loadmat(self.param_path)
         self.image_mean = params['normalization'][0][0][0]
         self.image_mean = np.mean(self.image_mean, axis=(0, 1))
-        
+
         count = 0
         for idx in range(self.net.size()):
             if 'conv' in self.net.getLayerName(idx):
                 weight, bias = params['layers'][0][idx][0][0][0][0]
                 # matconvnet: weights dim [height, width, in_channel, out_channel]
                 # ours: weights dim [out_channel, in_channel, height, width]
-                weight = np.transpose(weight,[3,2,0,1]).flatten().astype(np.float)
+                weight = np.transpose(weight, [3, 2, 0, 1]).flatten().astype(np.float)
                 bias = bias.reshape(-1).astype(np.float)
                 self.net.loadParams(idx, weight, bias, self.filter_quant_params[count])
                 count += 1
             if 'fc' in self.net.getLayerName(idx):
                 # Loading params may take quite a while. Please be patient.
-                weight, bias = params['layers'][0][idx-1][0][0][0][0]
-                weight = weight.reshape([weight.shape[0]*weight.shape[1]*weight.shape[2], weight.shape[3]])
+                weight, bias = params['layers'][0][idx - 1][0][0][0][0]
+                weight = weight.reshape([weight.shape[0] * weight.shape[1] * weight.shape[2], weight.shape[3]])
                 weight = np.transpose(weight, [1, 0]).flatten().astype(np.float)
                 bias = bias.reshape(-1).astype(np.float)
                 self.net.loadParams(idx, weight, bias, self.filter_quant_params[count])
@@ -154,10 +155,10 @@ class VGG19(object):
         image_mean = np.array([123.68, 116.779, 103.939])
         print('Loading and preprocessing image from ' + image_dir)
         input_image = scipy.misc.imread(image_dir)
-        input_image = scipy.misc.imresize(input_image,[224,224,3])
+        input_image = scipy.misc.imresize(input_image, [224, 224, 3])
         input_image = np.array(input_image).astype(np.float32)
         input_image -= image_mean
-        input_image = np.reshape(input_image, [1]+list(input_image.shape))
+        input_image = np.reshape(input_image, [1] + list(input_image.shape))
         # input dim [N, channel, height, width]
         input_image = np.transpose(input_image, [0, 3, 1, 2])
         input_data = input_image.flatten().astype(np.float)
@@ -165,7 +166,7 @@ class VGG19(object):
 
     def forward(self):
         return self.net.forward()
-    
+
     def get_top5(self, label):
         start = time.time()
         self.forward()
@@ -190,11 +191,11 @@ class VGG19(object):
             idx = result.index(top)
             if idx == label:
                 top5 = True
-            print('%f - '%top + labels[idx].strip())
+            print('%f - ' % top + labels[idx].strip())
 
-        print('inference time: %f'%(end - start))
-        return top1,top5
-    
+        print('inference time: %f' % (end - start))
+        return top1, top5
+
     def evaluate(self, file_list):
         top1_num = 0
         top5_num = 0
@@ -208,17 +209,17 @@ class VGG19(object):
                 image = line.split()[0].strip()
                 label = int(line.split()[1].strip())
                 vgg.load_image(image)
-                top1,top5 = vgg.get_top5(label)
-                if top1 :
+                top1, top5 = vgg.get_top5(label)
+                if top1:
                     top1_num += 1
-                if top5 :
+                if top5:
                     top5_num += 1
         end = time.time()
 
         print('Global accuracy : ')
-        print('accuracy1: %f (%d/%d) '%(float(top1_num)/float(total_num), top1_num, total_num))
-        print('accuracy5: %f (%d/%d) '%(float(top5_num)/float(total_num), top5_num, total_num))
-        print('Total execution time: %f'%(end - start))
+        print('accuracy1: %f (%d/%d) ' % (float(top1_num) / float(total_num), top1_num, total_num))
+        print('accuracy5: %f (%d/%d) ' % (float(top5_num) / float(total_num), top5_num, total_num))
+        print('Total execution time: %f' % (end - start))
 
 
 if __name__ == '__main__':

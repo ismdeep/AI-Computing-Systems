@@ -5,20 +5,21 @@ import numpy as np
 import os
 import scipy.io
 
+
 def evaluate(vgg):
     start = time.time()
     vgg.forward()
     end = time.time()
-    print('inference time: %f'%(end - start))
+    print('inference time: %f' % (end - start))
     result = vgg.net.getOutputData()
     prob = max(result)
     top1 = result.index(prob)
-    print('Classification result: id = %d, prob = %f'%(top1, prob))
+    print('Classification result: id = %d, prob = %f' % (top1, prob))
 
 
 if __name__ == '__main__':
     vgg = VGG19()
-    vgg.build_model(param_path='../imagenet-vgg-verydeep-19.mat', 
+    vgg.build_model(param_path='../imagenet-vgg-verydeep-19.mat',
                     quant_param_path='../vgg19_quant_param_new.npz')
     vgg.load_model()
     vgg.load_image('../cat1.jpg')
