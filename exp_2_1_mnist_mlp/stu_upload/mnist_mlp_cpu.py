@@ -71,8 +71,8 @@ class MNIST_MLP(object):
         print('Building multi-layer perception model...')
         self.fc1 = FullyConnectedLayer(self.input_size, self.hidden1)
         self.relu1 = ReLULayer()
-        ________________
-        ________________
+        self.fc2 = FullyConnectedLayer(self.hidden1, self.hidden2)
+        self.relu2 = ReLULayer()
         self.fc3 = FullyConnectedLayer(self.hidden2, self.out_classes)
         self.softmax = SoftmaxLossLayer()
         self.update_layer_list = [self.fc1, self.fc2, self.fc3]
@@ -101,14 +101,18 @@ class MNIST_MLP(object):
         # TODO：神经网络的前向传播
         h1 = self.fc1.forward(input)
         h1 = self.relu1.forward(h1)
-        ________________
+        h2 = self.fc2.forward(h1)
+        h2 = self.relu2.forward(h2)
+        h3 = self.fc3.forward(h2)
         prob = self.softmax.forward(h3)
         return prob
 
     def backward(self):  # 神经网络的反向传播
         # TODO：神经网络的反向传播
         dloss = self.softmax.backward()
-        ________________
+        dh3 = self.fc3.backward(dloss)
+        dh2 = self.relu2.backward(dh3)
+        dh2 = self.fc2.backward(dh2)
         dh1 = self.relu1.backward(dh2)
         dh1 = self.fc1.backward(dh1)
 
